@@ -36,13 +36,23 @@ object Jvm {
   **/
   def osPath(path:String) = if (isOS("WINDOWS")) Process(Seq("cygpath", path)).lineStream.mkString else path
 
+  def getPodName(hostAndUser: String, sbtLogger: Logger) : String = {
+    val command: Array[String] = Array("kubectl", "get", "pods", "-l", s"host=$hostAndUser", "--no-headers", "-o", "name")
+    val builder = new JProcessBuilder(command: _*)
+    sbtLogger.debug("Jvm.getPodName about to run " + command.mkString(" "))
+    val podName = Process(builder).!!
+    sbtLogger.debug("Jvm.getPodName podName is " + podName)
+    podName.stripPrefix("pod/").stripSuffix("\n")
+  } 
+
   def syncJar(jarName: String, hostAndUser: String, remoteDir: String, sbtLogger: Logger) : Process = {
-    val command: Array[String] = Array("ssh", hostAndUser, "mkdir -p " + remoteDir)
+    val podName = getPodName(hostAndUser, sbtLogger)
+    val command: Array[String] = Array("kubectl", "exec", podName, "--", "/bin/bash", "-c", s"rm -rf $remoteDir && mkdir -p $remoteDir")
     val builder = new JProcessBuilder(command: _*)
     sbtLogger.debug("Jvm.syncJar about to run " + command.mkString(" "))
     val process = Process(builder).run(sbtLogger, false)
     if (process.exitValue() == 0) {
-      val command: Array[String] = Array("rsync", "-ace", "ssh", osPath(jarName), hostAndUser +":" + remoteDir +"/")
+      val command: Array[String] = Array("kubectl", "cp", osPath(jarName), podName + ":" + remoteDir +"/")
       val builder = new JProcessBuilder(command: _*)
       sbtLogger.debug("Jvm.syncJar about to run " + command.mkString(" "))
       Process(builder).run(sbtLogger, false)
@@ -55,10 +65,11 @@ object Jvm {
   def forkRemoteJava(java: String, jvmOptions: Seq[String], appOptions: Seq[String], jarName: String,
                      hostAndUser: String, remoteDir: String, logger: Logger, connectInput: Boolean,
                      sbtLogger: Logger): Process = {
+    val podName = getPodName(hostAndUser, sbtLogger)
     sbtLogger.debug("About to use java " + java)
     val shortJarName = new File(jarName).getName
     val javaCommand = List(List(java), jvmOptions, List("-cp", shortJarName), appOptions).flatten
-    val command = Array("ssh", hostAndUser, ("cd " :: (remoteDir :: (" ; " :: javaCommand))).mkString(" "))
+    val command = Array("kubectl", "exec", podName, "--", "/bin/bash", "-c", ("cd " :: (remoteDir :: (" ; " :: javaCommand))).mkString(" "))
     sbtLogger.debug("Jvm.forkRemoteJava about to run " + command.mkString(" "))
     val builder = new JProcessBuilder(command: _*)
     Process(builder).run(logger, connectInput)
