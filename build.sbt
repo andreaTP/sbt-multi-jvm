@@ -26,20 +26,3 @@ scalacOptions ++= List(
 // publish settings
 publishMavenStyle := false
 licenses += "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
-
-// release settings
-import ReleaseTransformations._
-releaseProcess := Seq[ReleaseStep](
-  checkSnapshotDependencies,
-  inquireVersions,
-  runClean,
-  releaseStepCommandAndRemaining("^ compile"), // still no tests =(
-  setReleaseVersion,
-  commitReleaseVersion,
-  tagRelease,
-  releaseStepCommandAndRemaining("^ publish"),
-  // releaseStepTask(bintrayRelease),
-  setNextVersion,
-  commitNextVersion,
-  pushChanges
-)
