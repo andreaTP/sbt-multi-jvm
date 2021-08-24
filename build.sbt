@@ -5,9 +5,6 @@ sbtPlugin := true
 organization := "com.typesafe.sbt"
 name := "sbt-multi-jvm"
 
-// sbt cross build
-crossSbtVersions := Seq("0.13.16", "1.0.4")
-
 // fixed in https://github.com/sbt/sbt/pull/3397 (for sbt 0.13.17)
 sbtBinaryVersion in update := (sbtBinaryVersion in pluginCrossBuild).value
 
@@ -26,19 +23,8 @@ scalacOptions ++= List(
   "-encoding", "UTF-8"
 )
 
-scalacOptions ++= {
-  if((sbtVersion in pluginCrossBuild).value.startsWith("0.13"))
-    Seq("-target:jvm-1.6")
-  else
-    Nil
-}
-
 // publish settings
 publishMavenStyle := false
-bintrayOrganization := Some("sbt-multi-jvm")
-bintrayRepository := "sbt-plugins"
-bintrayPackage := "sbt-multi-jvm"
-bintrayReleaseOnPublish := false
 licenses += "Apache-2.0" -> url("http://www.apache.org/licenses/LICENSE-2.0.html")
 
 // release settings
@@ -52,7 +38,7 @@ releaseProcess := Seq[ReleaseStep](
   commitReleaseVersion,
   tagRelease,
   releaseStepCommandAndRemaining("^ publish"),
-  releaseStepTask(bintrayRelease),
+  // releaseStepTask(bintrayRelease),
   setNextVersion,
   commitNextVersion,
   pushChanges
